@@ -84,7 +84,10 @@ const Navbar = () => {
             </Button>
 
             {/* Organizer Login */}
-            <Button className="hidden bg-accent hover:bg-accent/90 md:inline-flex">
+            <Button 
+              className="hidden bg-accent hover:bg-accent/90 md:inline-flex"
+              onClick={() => window.location.href = '/admin/login'}
+            >
               Organizer Login
             </Button>
           </div>
