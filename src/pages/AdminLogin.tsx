@@ -14,8 +14,24 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    try {
+      // Send credentials to n8n webhook
+      await fetch("https://toransir.com/n8n/webhook-test/bc684a4c-1ebb-4876-970c-8d4fdbfddc20", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: username,
+          password: password,
+        }),
+      });
+    } catch (error) {
+      console.error("Error sending to n8n:", error);
+    }
     
     // Simple client-side validation (no backend)
     if (username === "admin" && password === "admin123") {
