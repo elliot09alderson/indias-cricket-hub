@@ -9,8 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Trophy, Users, Calendar, LogOut, Plus, Trash2, 
   Upload, ImageIcon, MapPin, Phone, Award, Medal, Gift,
-  Building, Map
+  Building, Map, ChevronDown, UserPlus, Shield, Hash
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface Tournament {
@@ -36,6 +43,15 @@ interface Team {
   id: string;
   name: string;
   city: string;
+  tournamentId: string;
+  players: Player[];
+}
+
+interface Player {
+  id: string;
+  name: string;
+  role: string;
+  jerseyNumber: string;
 }
 
 const AdminDashboard = () => {
@@ -65,6 +81,13 @@ const AdminDashboard = () => {
   // Team Form State
   const [teamName, setTeamName] = useState("");
   const [teamCity, setTeamCity] = useState("");
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  
+  // Player Form State
+  const [playerName, setPlayerName] = useState("");
+  const [playerRole, setPlayerRole] = useState("");
+  const [playerJerseyNumber, setPlayerJerseyNumber] = useState("");
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
@@ -159,10 +182,33 @@ const AdminDashboard = () => {
   const handleCreateTeam = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!selectedTournamentId) {
+      toast({
+        title: "Select Tournament",
+        description: "Please select a tournament first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
+    const tournamentTeams = teams.filter(t => t.tournamentId === selectedTournamentId);
+    
+    if (selectedTournament && tournamentTeams.length >= selectedTournament.maxTeamSize) {
+      toast({
+        title: "Team Limit Reached",
+        description: `Maximum ${selectedTournament.maxTeamSize} teams allowed for this tournament.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const newTeam: Team = {
       id: Date.now().toString(),
       name: teamName,
       city: teamCity,
+      tournamentId: selectedTournamentId,
+      players: [],
     };
     
     const updatedTeams = [...teams, newTeam];
@@ -177,6 +223,67 @@ const AdminDashboard = () => {
     setTeamName("");
     setTeamCity("");
   };
+
+  const handleAddPlayer = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedTeamId) {
+      toast({
+        title: "Select Team",
+        description: "Please select a team first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const newPlayer: Player = {
+      id: Date.now().toString(),
+      name: playerName,
+      role: playerRole,
+      jerseyNumber: playerJerseyNumber,
+    };
+    
+    const updatedTeams = teams.map(team => {
+      if (team.id === selectedTeamId) {
+        return { ...team, players: [...team.players, newPlayer] };
+      }
+      return team;
+    });
+    
+    setTeams(updatedTeams);
+    localStorage.setItem("teams", JSON.stringify(updatedTeams));
+    
+    toast({
+      title: "Player Added",
+      description: `${playerName} has been added to the team.`,
+    });
+    
+    setPlayerName("");
+    setPlayerRole("");
+    setPlayerJerseyNumber("");
+  };
+
+  const handleDeletePlayer = (teamId: string, playerId: string) => {
+    const updatedTeams = teams.map(team => {
+      if (team.id === teamId) {
+        return { ...team, players: team.players.filter(p => p.id !== playerId) };
+      }
+      return team;
+    });
+    
+    setTeams(updatedTeams);
+    localStorage.setItem("teams", JSON.stringify(updatedTeams));
+    
+    toast({
+      title: "Player Removed",
+      description: "Player has been removed from the team.",
+    });
+  };
+
+  const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
+  const tournamentTeams = teams.filter(t => t.tournamentId === selectedTournamentId);
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+  const teamsLeft = selectedTournament ? selectedTournament.maxTeamSize - tournamentTeams.length : 0;
 
   const handleDeleteTournament = (id: string) => {
     const updatedTournaments = tournaments.filter(t => t.id !== id);
@@ -632,87 +739,328 @@ const AdminDashboard = () => {
 
             {/* Teams Tab */}
             <TabsContent value="teams" className="space-y-6">
-              <Card>
-                <CardHeader>
+              {/* Tournament Selection */}
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
                   <CardTitle className="flex items-center gap-2">
-                    <Plus className="w-5 h-5" />
-                    Add New Team
+                    <Trophy className="w-5 h-5" />
+                    Select Tournament
                   </CardTitle>
-                  <CardDescription>Register a new cricket team</CardDescription>
+                  <CardDescription>Choose a tournament to manage teams and players</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateTeam} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="teamName">Team Name</Label>
-                        <Input
-                          id="teamName"
-                          placeholder="e.g., Mumbai Warriors"
-                          value={teamName}
-                          onChange={(e) => setTeamName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="teamCity">City</Label>
-                        <Input
-                          id="teamCity"
-                          placeholder="e.g., Mumbai"
-                          value={teamCity}
-                          onChange={(e) => setTeamCity(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <Button type="submit" className="bg-accent hover:bg-accent/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Team
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              {/* Teams List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Teams</CardTitle>
-                  <CardDescription>Manage registered teams</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {teams.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No teams added yet.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {teams.map((team) => (
-                        <motion.div
-                          key={team.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors"
-                        >
+                <CardContent className="pt-6">
+                  <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
+                    <SelectTrigger className="w-full bg-background">
+                      <SelectValue placeholder="Select a tournament..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border border-border">
+                      {tournaments.map((tournament) => (
+                        <SelectItem key={tournament.id} value={tournament.id}>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-accent to-cricket-gold rounded-lg flex items-center justify-center">
-                              <Users className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-foreground">{team.name}</h3>
-                              <p className="text-sm text-muted-foreground">{team.city}</p>
-                            </div>
+                            <img 
+                              src={tournament.banner} 
+                              alt={tournament.name}
+                              className="w-10 h-6 object-cover rounded"
+                            />
+                            <span>{tournament.name}</span>
+                            <span className="text-muted-foreground">• {tournament.city}</span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteTeam(team.id)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </motion.div>
+                        </SelectItem>
                       ))}
-                    </div>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Selected Tournament Display */}
+                  {selectedTournament && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 rounded-xl border border-border overflow-hidden"
+                    >
+                      <div className="relative h-32">
+                        <img 
+                          src={selectedTournament.banner} 
+                          alt={selectedTournament.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                        <div className="absolute bottom-3 left-4 text-white">
+                          <h3 className="font-bold text-lg">{selectedTournament.name}</h3>
+                          <p className="text-sm text-white/80 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {selectedTournament.city}
+                          </p>
+                        </div>
+                        <div className="absolute bottom-3 right-4">
+                          <div className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
+                            teamsLeft > 0 
+                              ? 'bg-accent text-accent-foreground' 
+                              : 'bg-destructive text-destructive-foreground'
+                          }`}>
+                            {tournamentTeams.length}/{selectedTournament.maxTeamSize} teams
+                            <span className="ml-1 text-xs opacity-80">
+                              ({teamsLeft} left)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Teams and Players Grid */}
+              {selectedTournamentId && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Teams Section - Left */}
+                  <div className="space-y-6">
+                    {/* Add Team Form */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Plus className="w-5 h-5" />
+                          Add New Team
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleCreateTeam} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="teamName">Team Name</Label>
+                              <Input
+                                id="teamName"
+                                placeholder="e.g., Mumbai Warriors"
+                                value={teamName}
+                                onChange={(e) => setTeamName(e.target.value)}
+                                required
+                                className="bg-background"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="teamCity">City</Label>
+                              <Input
+                                id="teamCity"
+                                placeholder="e.g., Mumbai"
+                                value={teamCity}
+                                onChange={(e) => setTeamCity(e.target.value)}
+                                required
+                                className="bg-background"
+                              />
+                            </div>
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="bg-accent hover:bg-accent/90"
+                            disabled={teamsLeft <= 0}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Team
+                          </Button>
+                        </form>
+                      </CardContent>
+                    </Card>
+
+                    {/* Teams List */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          Tournament Teams
+                        </CardTitle>
+                        <CardDescription>
+                          {tournamentTeams.length} teams registered
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {tournamentTeams.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8">No teams added yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {tournamentTeams.map((team) => (
+                              <motion.div
+                                key={team.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                onClick={() => setSelectedTeamId(team.id)}
+                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                                  selectedTeamId === team.id 
+                                    ? 'border-accent bg-accent/10' 
+                                    : 'border-border hover:bg-muted/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary rounded-lg flex items-center justify-center">
+                                    <Shield className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold text-foreground">{team.name}</h3>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                      <MapPin className="w-3 h-3" />
+                                      {team.city}
+                                      <span className="text-accent">• {team.players.length} players</span>
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTeam(team.id);
+                                  }}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Players Section - Right */}
+                  <div className="space-y-6">
+                    {/* Add Player Form */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <UserPlus className="w-5 h-5" />
+                          Add Player
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedTeam ? `Adding to ${selectedTeam.name}` : 'Select a team first'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleAddPlayer} className="space-y-4">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="playerName">Player Name</Label>
+                              <Input
+                                id="playerName"
+                                placeholder="e.g., Virat Kohli"
+                                value={playerName}
+                                onChange={(e) => setPlayerName(e.target.value)}
+                                required
+                                disabled={!selectedTeamId}
+                                className="bg-background"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="playerRole">Role</Label>
+                                <Select value={playerRole} onValueChange={setPlayerRole} disabled={!selectedTeamId}>
+                                  <SelectTrigger className="bg-background">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-card border border-border">
+                                    <SelectItem value="Batsman">Batsman</SelectItem>
+                                    <SelectItem value="Bowler">Bowler</SelectItem>
+                                    <SelectItem value="All-Rounder">All-Rounder</SelectItem>
+                                    <SelectItem value="Wicket-Keeper">Wicket-Keeper</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="playerJerseyNumber" className="flex items-center gap-1">
+                                  <Hash className="w-3 h-3" /> Jersey
+                                </Label>
+                                <Input
+                                  id="playerJerseyNumber"
+                                  placeholder="e.g., 18"
+                                  value={playerJerseyNumber}
+                                  onChange={(e) => setPlayerJerseyNumber(e.target.value)}
+                                  required
+                                  disabled={!selectedTeamId}
+                                  className="bg-background"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="bg-primary hover:bg-primary/90 w-full"
+                            disabled={!selectedTeamId || !playerRole}
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Add Player
+                          </Button>
+                        </form>
+                      </CardContent>
+                    </Card>
+
+                    {/* Players List */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          Team Players
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedTeam ? `${selectedTeam.players.length} players in ${selectedTeam.name}` : 'Select a team to view players'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {!selectedTeamId ? (
+                          <p className="text-center text-muted-foreground py-8">Select a team to view players.</p>
+                        ) : selectedTeam?.players.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8">No players added yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {selectedTeam?.players.map((player) => (
+                              <motion.div
+                                key={player.id}
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                    #{player.jerseyNumber}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-foreground">{player.name}</h4>
+                                    <p className="text-xs text-muted-foreground">{player.role}</p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeletePlayer(selectedTeamId, player.id)}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {/* Show message if no tournament selected */}
+              {!selectedTournamentId && tournaments.length > 0 && (
+                <Card className="border-dashed border-2">
+                  <CardContent className="py-12 text-center">
+                    <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">Select a tournament above to manage teams and players</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {tournaments.length === 0 && (
+                <Card className="border-dashed border-2">
+                  <CardContent className="py-12 text-center">
+                    <Trophy className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">Create a tournament first to add teams</p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </motion.div>
