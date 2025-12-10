@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Users, Calendar, LogOut, Plus, Trash2 } from "lucide-react";
+import { 
+  Trophy, Users, Calendar, LogOut, Plus, Trash2, 
+  Upload, ImageIcon, MapPin, Phone, Award, Medal, Gift,
+  Building, Map
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Tournament {
   id: string;
   name: string;
+  banner: string;
+  maxTeamSize: number;
   startDate: string;
   endDate: string;
+  firstPrize: string;
+  secondPrize: string;
+  otherPrize?: string;
+  location: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  contactNumber: string;
   teams: string[];
 }
 
@@ -26,27 +41,37 @@ interface Team {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   
   // Tournament Form State
   const [tournamentName, setTournamentName] = useState("");
+  const [banner, setBanner] = useState("");
+  const [maxTeamSize, setMaxTeamSize] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [firstPrize, setFirstPrize] = useState("");
+  const [secondPrize, setSecondPrize] = useState("");
+  const [otherPrize, setOtherPrize] = useState("");
+  const [location, setLocation] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   
   // Team Form State
   const [teamName, setTeamName] = useState("");
   const [teamCity, setTeamCity] = useState("");
 
   useEffect(() => {
-    // Check if user is logged in
     const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
     if (!isLoggedIn) {
       navigate("/admin/login");
     }
 
-    // Load data from localStorage
     const savedTournaments = localStorage.getItem("tournaments");
     const savedTeams = localStorage.getItem("teams");
     
@@ -63,14 +88,45 @@ const AdminDashboard = () => {
     navigate("/admin/login");
   };
 
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBanner(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateTournament = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!banner) {
+      toast({
+        title: "Banner Required",
+        description: "Please upload a tournament banner.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const newTournament: Tournament = {
       id: Date.now().toString(),
       name: tournamentName,
+      banner,
+      maxTeamSize: parseInt(maxTeamSize),
       startDate,
       endDate,
+      firstPrize,
+      secondPrize,
+      otherPrize: otherPrize || undefined,
+      location,
+      address,
+      city,
+      state,
+      pincode,
+      contactNumber,
       teams: [],
     };
     
@@ -85,8 +141,19 @@ const AdminDashboard = () => {
     
     // Reset form
     setTournamentName("");
+    setBanner("");
+    setMaxTeamSize("");
     setStartDate("");
     setEndDate("");
+    setFirstPrize("");
+    setSecondPrize("");
+    setOtherPrize("");
+    setLocation("");
+    setAddress("");
+    setCity("");
+    setState("");
+    setPincode("");
+    setContactNumber("");
   };
 
   const handleCreateTeam = (e: React.FormEvent) => {
@@ -107,7 +174,6 @@ const AdminDashboard = () => {
       description: `${teamName} has been added successfully.`,
     });
     
-    // Reset form
     setTeamName("");
     setTeamCity("");
   };
@@ -227,49 +293,260 @@ const AdminDashboard = () => {
 
             {/* Tournaments Tab */}
             <TabsContent value="tournaments" className="space-y-6">
-              <Card>
-                <CardHeader>
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
                   <CardTitle className="flex items-center gap-2">
                     <Plus className="w-5 h-5" />
                     Create New Tournament
                   </CardTitle>
-                  <CardDescription>Add a new cricket tournament</CardDescription>
+                  <CardDescription>Fill in the details to add a new cricket tournament</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateTournament} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tournamentName">Tournament Name</Label>
-                        <Input
-                          id="tournamentName"
-                          placeholder="e.g., Premier League 2025"
-                          value={tournamentName}
-                          onChange={(e) => setTournamentName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="startDate">Start Date</Label>
-                        <Input
-                          id="startDate"
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="endDate">End Date</Label>
-                        <Input
-                          id="endDate"
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          required
+                <CardContent className="pt-6">
+                  <form onSubmit={handleCreateTournament} className="space-y-8">
+                    {/* Banner Upload Section */}
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-primary" />
+                        Tournament Banner <span className="text-destructive">*</span>
+                      </Label>
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
+                          banner 
+                            ? 'border-accent bg-accent/5' 
+                            : 'border-muted-foreground/30 hover:border-primary/50 bg-muted/30'
+                        }`}
+                      >
+                        {banner ? (
+                          <div className="relative">
+                            <img 
+                              src={banner} 
+                              alt="Tournament Banner" 
+                              className="w-full h-48 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                              <div className="text-white text-center">
+                                <Upload className="w-8 h-8 mx-auto mb-2" />
+                                <p className="text-sm">Click to change banner</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-48 flex flex-col items-center justify-center text-muted-foreground">
+                            <Upload className="w-10 h-10 mb-3" />
+                            <p className="text-sm font-medium">Click to upload banner</p>
+                            <p className="text-xs mt-1">PNG, JPG up to 5MB</p>
+                          </div>
+                        )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBannerUpload}
+                          className="hidden"
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="bg-accent hover:bg-accent/90">
+
+                    {/* Basic Info */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Basic Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="tournamentName">Tournament Name <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="tournamentName"
+                            placeholder="e.g., Premier League 2025"
+                            value={tournamentName}
+                            onChange={(e) => setTournamentName(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="maxTeamSize">Max Team Size <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="maxTeamSize"
+                            type="number"
+                            min="1"
+                            placeholder="e.g., 15"
+                            value={maxTeamSize}
+                            onChange={(e) => setMaxTeamSize(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="contactNumber" className="flex items-center gap-2">
+                            <Phone className="w-3 h-3" /> Contact Number <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="contactNumber"
+                            type="tel"
+                            placeholder="e.g., 9876543210"
+                            value={contactNumber}
+                            onChange={(e) => setContactNumber(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dates */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        <Calendar className="w-4 h-4" /> Tournament Dates
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="startDate">Start Date <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="startDate"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endDate">End Date <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="endDate"
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prizes */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Prize Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstPrize" className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
+                              <Trophy className="w-3 h-3 text-white" />
+                            </div>
+                            First Prize <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="firstPrize"
+                            placeholder="e.g., ₹1,00,000"
+                            value={firstPrize}
+                            onChange={(e) => setFirstPrize(e.target.value)}
+                            required
+                            className="bg-background border-yellow-400/30 focus:border-yellow-400"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="secondPrize" className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center">
+                              <Medal className="w-3 h-3 text-white" />
+                            </div>
+                            Second Prize <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="secondPrize"
+                            placeholder="e.g., ₹50,000"
+                            value={secondPrize}
+                            onChange={(e) => setSecondPrize(e.target.value)}
+                            required
+                            className="bg-background border-slate-400/30 focus:border-slate-400"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="otherPrize" className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                              <Gift className="w-3 h-3 text-white" />
+                            </div>
+                            Other Prizes (Optional)
+                          </Label>
+                          <Input
+                            id="otherPrize"
+                            placeholder="e.g., ₹25,000"
+                            value={otherPrize}
+                            onChange={(e) => setOtherPrize(e.target.value)}
+                            className="bg-background border-orange-400/30 focus:border-orange-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        <MapPin className="w-4 h-4" /> Venue Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="location" className="flex items-center gap-2">
+                            <Building className="w-3 h-3" /> Venue Name <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="location"
+                            placeholder="e.g., Wankhede Stadium"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="address">Address <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="address"
+                            placeholder="e.g., D Road, Churchgate"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="city"
+                            placeholder="e.g., Mumbai"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="state"
+                            placeholder="e.g., Maharashtra"
+                            value={state}
+                            onChange={(e) => setState(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pincode">Pincode <span className="text-destructive">*</span></Label>
+                          <Input
+                            id="pincode"
+                            placeholder="e.g., 400020"
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value)}
+                            required
+                            className="bg-background"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 w-full md:w-auto">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Tournament
                     </Button>
@@ -287,28 +564,64 @@ const AdminDashboard = () => {
                   {tournaments.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">No tournaments created yet.</p>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {tournaments.map((tournament) => (
                         <motion.div
                           key={tournament.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="group relative rounded-xl border border-border bg-card overflow-hidden hover:shadow-lg transition-all duration-300"
                         >
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-foreground">{tournament.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
-                            </p>
+                          {/* Banner */}
+                          <div className="relative h-36 overflow-hidden">
+                            <img 
+                              src={tournament.banner} 
+                              alt={tournament.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteTournament(tournament.id)}
+                              className="absolute top-2 right-2 text-white hover:text-destructive hover:bg-white/20"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteTournament(tournament.id)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          
+                          {/* Content */}
+                          <div className="p-4 space-y-3">
+                            <h3 className="font-bold text-foreground text-lg line-clamp-1">{tournament.name}</h3>
+                            
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              <span>
+                                {new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="w-3 h-3" />
+                              <span className="line-clamp-1">{tournament.city}, {tournament.state}</span>
+                            </div>
+
+                            {/* Prizes */}
+                            <div className="flex items-center gap-3 pt-2 border-t border-border">
+                              <div className="flex items-center gap-1" title="First Prize">
+                                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
+                                  <Trophy className="w-2.5 h-2.5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium">{tournament.firstPrize}</span>
+                              </div>
+                              <div className="flex items-center gap-1" title="Second Prize">
+                                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center">
+                                  <Medal className="w-2.5 h-2.5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium">{tournament.secondPrize}</span>
+                              </div>
+                            </div>
+                          </div>
                         </motion.div>
                       ))}
                     </div>
